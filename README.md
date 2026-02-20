@@ -2,7 +2,7 @@
 
 A demo web app that connects to the **John Deere Operations Center API** to display farm data — fields, organizations, and harvest operations — all behind a Supabase-powered auth layer.
 
-![Dashboard screenshot](https://github.com/user-attachments/assets/58c67e2b-f4d7-464d-92a4-20da963d5661)
+![Dashboard screenshot](./demo.png)
 
 ---
 
