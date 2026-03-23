@@ -58,7 +58,6 @@ export function FieldMap() {
     if (!mapContainerRef.current || !MAPBOX_TOKEN) return;
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
-    (mapboxgl as any).config.EVENTS_URL = '';
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
