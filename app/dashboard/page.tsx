@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { JohnDeereConnect } from '@/components/dashboard/john-deere-connect';
 import { OrganizationSelector } from '@/components/dashboard/organization-selector';
+import { AreaUnitToggle } from '@/components/dashboard/area-unit-toggle';
 import { FieldMap } from '@/components/dashboard/field-map';
 import { FieldsList } from '@/components/dashboard/fields-list';
 import { HarvestOperations } from '@/components/dashboard/harvest-operations';
@@ -14,7 +15,7 @@ import { Loader as Loader2, LogOut, Tractor, Map, MapPin, Wheat, User } from 'lu
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading, signOut, johnDeereConnection, refreshJohnDeereConnection } = useAuth();
+  const { user, loading, signOut, johnDeereConnection, refreshJohnDeereConnection, updatePreferredAreaUnit } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -85,29 +86,36 @@ export default function DashboardPage() {
 
               {johnDeereConnection.selected_org_id && (
                 <Tabs defaultValue="map" className="w-full">
-                  <TabsList className="bg-white border border-slate-200 p-1">
-                    <TabsTrigger
-                      value="map"
-                      className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-                    >
-                      <Map className="w-4 h-4 mr-2" />
-                      Map
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="fields"
-                      className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-                    >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Fields
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="harvest"
-                      className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-                    >
-                      <Wheat className="w-4 h-4 mr-2" />
-                      Harvest Operations
-                    </TabsTrigger>
-                  </TabsList>
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <TabsList className="bg-white border border-slate-200 p-1">
+                      <TabsTrigger
+                        value="map"
+                        className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                      >
+                        <Map className="w-4 h-4 mr-2" />
+                        Map
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="fields"
+                        className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                      >
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Fields
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="harvest"
+                        className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                      >
+                        <Wheat className="w-4 h-4 mr-2" />
+                        Harvest Operations
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <AreaUnitToggle
+                      value={johnDeereConnection.preferred_area_unit || 'ac'}
+                      onChange={updatePreferredAreaUnit}
+                    />
+                  </div>
 
                   <TabsContent value="map" className="mt-4 data-[state=inactive]:hidden" forceMount>
                     <FieldMap key={`map-${refreshKey}`} />

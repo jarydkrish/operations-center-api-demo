@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { useAuth } from '@/contexts/auth-context';
 import { fetchStoredFields, importFieldsWithBoundaries } from '@/lib/john-deere-client';
+import { formatArea } from '@/lib/area-utils';
 import { Button } from '@/components/ui/button';
 import { Loader as Loader2, Download, MapPin } from 'lucide-react';
 import type { StoredField } from '@/types/john-deere';
@@ -19,12 +20,17 @@ export function FieldMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
+  const preferredUnitRef = useRef(johnDeereConnection?.preferred_area_unit || 'ac');
 
   const [storedFields, setStoredFields] = useState<StoredField[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    preferredUnitRef.current = johnDeereConnection?.preferred_area_unit || 'ac';
+  }, [johnDeereConnection?.preferred_area_unit]);
 
   const loadStoredFields = useCallback(async () => {
     if (!johnDeereConnection?.selected_org_id) return;
@@ -183,16 +189,15 @@ export function FieldMap() {
       if (!props) return;
 
       const name = props.name || 'Unnamed Field';
-      const areaValue = props.area_value;
-      const areaUnit = props.area_unit;
+      const areaDisplay = formatArea(
+        props.area_value ? Number(props.area_value) : null,
+        props.area_unit || null,
+        preferredUnitRef.current
+      );
 
-      let areaText = '';
-      if (areaValue && areaUnit) {
-        const formatted = Number(areaValue).toLocaleString(undefined, {
-          maximumFractionDigits: 1,
-        });
-        areaText = `<div style="color:#94a3b8;font-size:12px;margin-top:2px;">${formatted} ${areaUnit}</div>`;
-      }
+      const areaText = areaDisplay
+        ? `<div style="color:#94a3b8;font-size:12px;margin-top:2px;">${areaDisplay}</div>`
+        : '';
 
       if (popupRef.current) {
         popupRef.current.remove();

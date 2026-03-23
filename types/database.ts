@@ -10,6 +10,7 @@ export interface Database {
           token_expires_at: string;
           selected_org_id: string | null;
           selected_org_name: string | null;
+          preferred_area_unit: string;
           created_at: string;
           updated_at: string;
         };
@@ -21,6 +22,7 @@ export interface Database {
           token_expires_at: string;
           selected_org_id?: string | null;
           selected_org_name?: string | null;
+          preferred_area_unit?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -32,6 +34,7 @@ export interface Database {
           token_expires_at?: string;
           selected_org_id?: string | null;
           selected_org_name?: string | null;
+          preferred_area_unit?: string;
           created_at?: string;
           updated_at?: string;
         };
