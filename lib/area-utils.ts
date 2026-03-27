@@ -1,5 +1,18 @@
 const HA_TO_AC = 2.47105;
 const AC_TO_HA = 1 / HA_TO_AC;
+const SQM_TO_AC = 0.000247105;
+const SQM_TO_HA = 0.0001;
+
+export function sqMetersToAcres(sqm: number): number {
+  return sqm * SQM_TO_AC;
+}
+
+export function sqMetersToUnit(sqm: number, unit: string): number {
+  const u = unit.toLowerCase();
+  if (u === 'ac') return sqm * SQM_TO_AC;
+  if (u === 'ha') return sqm * SQM_TO_HA;
+  return sqm;
+}
 
 export function convertArea(
   value: number,

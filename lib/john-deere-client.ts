@@ -134,6 +134,20 @@ export async function fetchHarvestOperations() {
   return response.json();
 }
 
+export async function fetchSeedingOperations() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/john-deere-api?action=seeding-operations`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch seeding operations');
+  }
+
+  return response.json();
+}
+
 export async function importFieldsWithBoundaries() {
   const headers = await getAuthHeaders();
   const response = await fetch(`${SUPABASE_URL}/functions/v1/john-deere-api?action=import-fields`, {
@@ -161,6 +175,58 @@ export async function fetchStoredFields() {
   }
 
   return response.json();
+}
+
+export async function fetchIrrigationAnalysis(fieldId: string) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${SUPABASE_URL}/functions/v1/john-deere-irrigation?action=irrigation-analysis&fieldId=${encodeURIComponent(fieldId)}`,
+    { headers },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch irrigation analysis');
+  }
+
+  return response.json();
+}
+
+export async function pollForShapefileUrl(
+  operationId: string,
+  onProgress?: (attempt: number, status: string) => void,
+): Promise<string> {
+  const headers = await getAuthHeaders();
+  const maxAttempts = 40;
+  const pollIntervalMs = 5000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    onProgress?.(attempt, 'polling');
+
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/john-deere-irrigation?action=shapefile-status&operationId=${encodeURIComponent(operationId)}`,
+      { headers },
+    );
+
+    if (response.status === 202) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      continue;
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to check shapefile status');
+    }
+
+    const data = await response.json();
+    if (data.status === 'ready' && data.storagePath) {
+      return data.storagePath as string;
+    }
+
+    throw new Error('Unexpected shapefile status response');
+  }
+
+  throw new Error('Shapefile processing timed out. Try again in a few minutes.');
 }
 
 export function getJohnDeereAuthUrl(redirectUri: string, state: string) {

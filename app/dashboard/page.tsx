@@ -10,10 +10,11 @@ import { FieldMap } from '@/components/dashboard/field-map';
 import { FieldsList } from '@/components/dashboard/fields-list';
 import { FieldFilters } from '@/components/dashboard/field-filters';
 import { HarvestOperations } from '@/components/dashboard/harvest-operations';
+import { IrrigationAnalysis } from '@/components/dashboard/irrigation-analysis';
 import { fetchStoredFields, importFieldsWithBoundaries } from '@/lib/john-deere-client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader as Loader2, LogOut, Tractor, Map, MapPin, Wheat, User } from 'lucide-react';
+import { Loader as Loader2, LogOut, Tractor, Map, MapPin, Wheat, Droplets, User } from 'lucide-react';
 import type { StoredField } from '@/types/john-deere';
 
 export default function DashboardPage() {
@@ -167,6 +168,13 @@ export default function DashboardPage() {
                           <Wheat className="w-4 h-4 mr-2" />
                           Harvest Operations
                         </TabsTrigger>
+                        <TabsTrigger
+                          value="irrigation"
+                          className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                        >
+                          <Droplets className="w-4 h-4 mr-2" />
+                          Irrigation
+                        </TabsTrigger>
                       </TabsList>
 
                       <AreaUnitToggle
@@ -200,6 +208,13 @@ export default function DashboardPage() {
 
                     <TabsContent value="harvest" className="mt-4">
                       <HarvestOperations key={`harvest-${refreshKey}`} />
+                    </TabsContent>
+
+                    <TabsContent value="irrigation" className="mt-4">
+                      <IrrigationAnalysis
+                        fields={storedFields}
+                        preferredUnit={preferredUnit}
+                      />
                     </TabsContent>
                   </Tabs>
                 </>

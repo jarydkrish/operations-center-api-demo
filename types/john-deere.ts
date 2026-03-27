@@ -33,8 +33,10 @@ export interface JohnDeereBoundary {
   id: string;
   name?: string;
   area?: JohnDeereMeasurement;
+  workableArea?: JohnDeereMeasurement;
   multipolygons: JohnDeerePolygon[];
   active: boolean;
+  irrigated?: boolean;
   links: JohnDeereLink[];
 }
 
@@ -113,4 +115,28 @@ export interface JohnDeereTokenResponse {
   expires_in: number;
   token_type: string;
   scope: string;
+}
+
+export interface IrrigationAnalysis {
+  fieldId: string;
+  fieldName: string;
+  boundaryId: string;
+  irrigated: boolean;
+  totalArea: { value: number; unit: string };
+  workableArea: { value: number; unit: string };
+  irrigatedAcres: number;
+  drylandAcres: number;
+  exteriorGeoJSON: GeoJSON.MultiPolygon | null;
+  interiorRingsGeoJSON: Array<GeoJSON.Polygon> | null;
+}
+
+export interface HarvestIrrigationAnalysis extends IrrigationAnalysis {
+  operationId: string;
+  harvestPolygons: GeoJSON.FeatureCollection | null;
+  irrigatedHarvestedAcres: number;
+  drylandHarvestedAcres: number;
+  irrigatedAvgYield: number | null;
+  drylandAvgYield: number | null;
+  irrigatedAvgMoisture: number | null;
+  drylandAvgMoisture: number | null;
 }
