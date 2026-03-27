@@ -12,6 +12,9 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 const SOURCE_ID = 'fields-source';
 const FILL_LAYER_ID = 'fields-fill';
 const LINE_LAYER_ID = 'fields-line';
+const IRRIGATED_SOURCE_ID = 'irrigated-fields-source';
+const IRRIGATED_FILL_LAYER_ID = 'irrigated-fields-fill';
+const IRRIGATED_LINE_LAYER_ID = 'irrigated-fields-line';
 const OP_IMAGE_SOURCE = 'op-image-source';
 const OP_IMAGE_LAYER = 'op-image-layer';
 
@@ -66,9 +69,10 @@ export function FullMap() {
     if (!map || !mapReady) return;
 
     // Clean up existing layers
-    [LINE_LAYER_ID, FILL_LAYER_ID].forEach(id => {
+    [IRRIGATED_LINE_LAYER_ID, IRRIGATED_FILL_LAYER_ID, LINE_LAYER_ID, FILL_LAYER_ID].forEach(id => {
       if (map.getLayer(id)) map.removeLayer(id);
     });
+    if (map.getSource(IRRIGATED_SOURCE_ID)) map.removeSource(IRRIGATED_SOURCE_ID);
     if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
 
     const fieldsWithBoundaries = filteredFields.filter(f => f.boundary_geojson);
@@ -133,10 +137,69 @@ export function FullMap() {
       },
     });
 
+    // Irrigated boundary layers
+    const fieldsWithIrrigated = filteredFields.filter(f => f.irrigated_boundary_geojson);
+    if (fieldsWithIrrigated.length > 0) {
+      const irrigatedFeatures = fieldsWithIrrigated.map(field => ({
+        type: 'Feature' as const,
+        properties: {
+          name: field.name,
+          jd_field_id: field.jd_field_id,
+          is_selected: field.jd_field_id === selectedFieldId ? 'true' : 'false',
+        },
+        geometry: field.irrigated_boundary_geojson!,
+      }));
+
+      map.addSource(IRRIGATED_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: irrigatedFeatures },
+      });
+
+      map.addLayer({
+        id: IRRIGATED_FILL_LAYER_ID,
+        type: 'fill',
+        source: IRRIGATED_SOURCE_ID,
+        paint: {
+          'fill-color': '#06b6d4',
+          'fill-opacity': [
+            'case',
+            ['==', ['get', 'is_selected'], 'true'], 0.3,
+            0.15,
+          ],
+        },
+      });
+
+      map.addLayer({
+        id: IRRIGATED_LINE_LAYER_ID,
+        type: 'line',
+        source: IRRIGATED_SOURCE_ID,
+        paint: {
+          'line-color': '#22d3ee',
+          'line-width': [
+            'case',
+            ['==', ['get', 'is_selected'], 'true'], 2.5,
+            1.5,
+          ],
+          'line-opacity': 0.9,
+          'line-dasharray': [4, 3],
+        },
+      });
+    }
+
     // Fit bounds
     const bounds = new mapboxgl.LngLatBounds();
     for (const field of fieldsWithBoundaries) {
       const geojson = field.boundary_geojson!;
+      for (const polygon of geojson.coordinates) {
+        for (const ring of polygon) {
+          for (const coord of ring) {
+            bounds.extend(coord as [number, number]);
+          }
+        }
+      }
+    }
+    for (const field of fieldsWithIrrigated) {
+      const geojson = field.irrigated_boundary_geojson!;
       for (const polygon of geojson.coordinates) {
         for (const ring of polygon) {
           for (const coord of ring) {

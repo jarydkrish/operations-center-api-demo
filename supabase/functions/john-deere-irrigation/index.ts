@@ -8,7 +8,6 @@ import {
 } from "../_shared/john-deere.ts";
 import {
   buildExteriorOnlyGeoJSON,
-  buildInteriorRingPolygons,
   JdBoundary,
 } from "../_shared/boundaries.ts";
 import area from "npm:@turf/area@7";
@@ -27,7 +26,7 @@ interface BoundaryAnalysisResult {
   irrigatedAcres: number;
   drylandAcres: number;
   exteriorGeoJSON: unknown;
-  interiorRingsGeoJSON: unknown[];
+  irrigatedBoundaryGeoJSON: unknown;
 }
 
 async function analyzeBoundary(
@@ -38,7 +37,7 @@ async function analyzeBoundary(
 ): Promise<BoundaryAnalysisResult> {
   const { data: storedField, error: fieldError } = await supabase
     .from("fields")
-    .select("raw_response")
+    .select("raw_response, irrigated_boundary_geojson, has_irrigated_boundary")
     .eq("user_id", userId)
     .eq("jd_field_id", fieldId)
     .maybeSingle();
@@ -60,35 +59,29 @@ async function analyzeBoundary(
   const workableAreaUnit = boundary.workableArea?.unit ?? totalAreaUnit;
 
   const exteriorGeoJSON = buildExteriorOnlyGeoJSON(boundary);
-  const interiorRings = buildInteriorRingPolygons(boundary);
+  const irrigatedBoundaryGeoJSON = storedField.irrigated_boundary_geojson || null;
 
   let irrigatedAcres = 0;
   let drylandAcres = 0;
-  const hasInteriorRings = interiorRings.length > 0;
 
   if (exteriorGeoJSON) {
     const totalSqm = area({ type: "Feature", geometry: exteriorGeoJSON, properties: {} });
     const totalAc = totalSqm * SQM_TO_AC;
 
-    if (hasInteriorRings) {
-      let interiorSqm = 0;
-      for (const ring of interiorRings) {
-        interiorSqm += area({ type: "Feature", geometry: ring, properties: {} });
-      }
-      irrigatedAcres = interiorSqm * SQM_TO_AC;
+    if (storedField.has_irrigated_boundary && irrigatedBoundaryGeoJSON) {
+      const irrigatedSqm = area({ type: "Feature", geometry: irrigatedBoundaryGeoJSON, properties: {} });
+      irrigatedAcres = irrigatedSqm * SQM_TO_AC;
       drylandAcres = totalAc - irrigatedAcres;
+    } else if (boundary.irrigated === true) {
+      irrigatedAcres = totalAc;
+      drylandAcres = 0;
     } else {
-      if (boundary.irrigated === true) {
-        irrigatedAcres = totalAc;
-        drylandAcres = 0;
-      } else {
-        irrigatedAcres = 0;
-        drylandAcres = totalAc;
-      }
+      irrigatedAcres = 0;
+      drylandAcres = totalAc;
     }
   }
 
-  const isIrrigated = hasInteriorRings || boundary.irrigated === true;
+  const isIrrigated = storedField.has_irrigated_boundary || boundary.irrigated === true;
 
   return {
     fieldId,
@@ -100,7 +93,7 @@ async function analyzeBoundary(
     irrigatedAcres,
     drylandAcres,
     exteriorGeoJSON,
-    interiorRingsGeoJSON: interiorRings,
+    irrigatedBoundaryGeoJSON,
   };
 }
 

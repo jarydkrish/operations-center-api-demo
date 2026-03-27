@@ -39,11 +39,11 @@ export async function processShapefile(
 
 /**
  * Classify harvest polygons as irrigated or dryland based on whether
- * they intersect with interior ring polygons (which represent the pivot/irrigated area).
+ * they intersect with the irrigated boundary polygon.
  */
 export function classifyHarvestPolygons(
   harvestGeoJSON: FeatureCollection,
-  interiorRingsGeoJSON: Array<{ type: 'Polygon'; coordinates: number[][][] }>,
+  irrigatedBoundaryGeoJSON: { type: 'MultiPolygon'; coordinates: number[][][][] } | null,
   irrigated: boolean,
 ): HarvestZoneStats {
   if (!harvestGeoJSON?.features) {
@@ -69,9 +69,9 @@ export function classifyHarvestPolygons(
   const irrigatedMoistures: number[] = [];
   const drylandMoistures: number[] = [];
 
-  const interiorFeatures = interiorRingsGeoJSON.map(
-    (ring) => turf.feature(ring) as Feature<Polygon>,
-  );
+  const irrigatedFeature = irrigatedBoundaryGeoJSON
+    ? turf.feature(irrigatedBoundaryGeoJSON) as Feature<MultiPolygon>
+    : null;
 
   for (const feature of harvestGeoJSON.features) {
     if (!feature.geometry) continue;
@@ -86,16 +86,13 @@ export function classifyHarvestPolygons(
 
     let isIrrigatedPolygon = false;
 
-    if (interiorFeatures.length > 0) {
-      for (const interiorFeature of interiorFeatures) {
-        try {
-          if (turf.booleanIntersects(feature as Feature<Polygon | MultiPolygon>, interiorFeature)) {
-            isIrrigatedPolygon = true;
-            break;
-          }
-        } catch {
-          // Skip invalid geometries
+    if (irrigatedFeature) {
+      try {
+        if (turf.booleanIntersects(feature as Feature<Polygon | MultiPolygon>, irrigatedFeature)) {
+          isIrrigatedPolygon = true;
         }
+      } catch {
+        // Skip invalid geometries
       }
     } else if (irrigated) {
       isIrrigatedPolygon = true;
@@ -147,11 +144,11 @@ export interface SeedingZoneStats {
 
 /**
  * Classify seeding polygons as irrigated or dryland based on whether
- * they intersect with interior ring polygons (pivot/irrigated area).
+ * they intersect with the irrigated boundary polygon.
  */
 export function classifySeedingPolygons(
   seedingGeoJSON: FeatureCollection,
-  interiorRingsGeoJSON: Array<{ type: 'Polygon'; coordinates: number[][][] }>,
+  irrigatedBoundaryGeoJSON: { type: 'MultiPolygon'; coordinates: number[][][][] } | null,
   irrigated: boolean,
 ): SeedingZoneStats {
   if (!seedingGeoJSON?.features) {
@@ -173,9 +170,9 @@ export function classifySeedingPolygons(
   const irrigatedControlRates: number[] = [];
   const drylandControlRates: number[] = [];
 
-  const interiorFeatures = interiorRingsGeoJSON.map(
-    (ring) => turf.feature(ring) as Feature<Polygon>,
-  );
+  const irrigatedFeature = irrigatedBoundaryGeoJSON
+    ? turf.feature(irrigatedBoundaryGeoJSON) as Feature<MultiPolygon>
+    : null;
 
   for (const feature of seedingGeoJSON.features) {
     if (!feature.geometry) continue;
@@ -189,16 +186,13 @@ export function classifySeedingPolygons(
 
     let isIrrigatedPolygon = false;
 
-    if (interiorFeatures.length > 0) {
-      for (const interiorFeature of interiorFeatures) {
-        try {
-          if (turf.booleanIntersects(feature as Feature<Polygon | MultiPolygon>, interiorFeature)) {
-            isIrrigatedPolygon = true;
-            break;
-          }
-        } catch {
-          // Skip invalid geometries
+    if (irrigatedFeature) {
+      try {
+        if (turf.booleanIntersects(feature as Feature<Polygon | MultiPolygon>, irrigatedFeature)) {
+          isIrrigatedPolygon = true;
         }
+      } catch {
+        // Skip invalid geometries
       }
     } else if (irrigated) {
       isIrrigatedPolygon = true;

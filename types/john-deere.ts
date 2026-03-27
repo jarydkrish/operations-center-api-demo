@@ -94,6 +94,10 @@ export interface StoredField {
   boundary_area_value: number | null;
   boundary_area_unit: string | null;
   active_boundary: boolean;
+  irrigated_boundary_geojson: GeoJSON.MultiPolygon | null;
+  irrigated_boundary_area_value: number | null;
+  irrigated_boundary_area_unit: string | null;
+  has_irrigated_boundary: boolean;
   client_name: string | null;
   client_id: string | null;
   farm_name: string | null;
@@ -157,7 +161,7 @@ export interface IrrigationAnalysis {
   irrigatedAcres: number;
   drylandAcres: number;
   exteriorGeoJSON: GeoJSON.MultiPolygon | null;
-  interiorRingsGeoJSON: Array<GeoJSON.Polygon> | null;
+  irrigatedBoundaryGeoJSON: GeoJSON.MultiPolygon | null;
 }
 
 export interface HarvestIrrigationAnalysis extends IrrigationAnalysis {

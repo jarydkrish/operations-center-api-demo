@@ -39,6 +39,26 @@ async function fetchAllFieldsPaginated(accessToken: string, orgId: string): Prom
   return allFields;
 }
 
+async function fetchIrrigatedBoundary(
+  accessToken: string,
+  orgId: string,
+  fieldId: string,
+): Promise<JdBoundary | null> {
+  try {
+    const response = await callJohnDeereApi(
+      accessToken,
+      `/organizations/${orgId}/fields/${fieldId}/boundaries?recordFilter=all`,
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const boundaries: JdBoundary[] = data.values || [];
+    return boundaries.find((b) => b.irrigated === true) || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function importFields(
   supabase: SupabaseClient,
   accessToken: string,
@@ -70,6 +90,21 @@ async function importFields(
 
     if (!boundaryGeojson) {
       withoutBoundaries++;
+    }
+
+    let irrigatedBoundaryGeojson = null;
+    let irrigatedBoundaryAreaValue = null;
+    let irrigatedBoundaryAreaUnit = null;
+    let hasIrrigatedBoundary = false;
+
+    const irrigatedBoundary = await fetchIrrigatedBoundary(accessToken, orgId, field.id);
+    if (irrigatedBoundary) {
+      irrigatedBoundaryGeojson = convertBoundaryToGeoJSON(irrigatedBoundary);
+      if (irrigatedBoundary.area) {
+        irrigatedBoundaryAreaValue = irrigatedBoundary.area.valueAsDouble;
+        irrigatedBoundaryAreaUnit = irrigatedBoundary.area.unit;
+      }
+      hasIrrigatedBoundary = !!irrigatedBoundaryGeojson;
     }
 
     let clientName: string | null = null;
@@ -131,6 +166,10 @@ async function importFields(
         boundary_area_value: boundaryAreaValue,
         boundary_area_unit: boundaryAreaUnit,
         active_boundary: activeBoundary,
+        irrigated_boundary_geojson: irrigatedBoundaryGeojson,
+        irrigated_boundary_area_value: irrigatedBoundaryAreaValue,
+        irrigated_boundary_area_unit: irrigatedBoundaryAreaUnit,
+        has_irrigated_boundary: hasIrrigatedBoundary,
         client_name: clientName,
         client_id: clientId,
         farm_name: farmName,

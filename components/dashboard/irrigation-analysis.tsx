@@ -85,13 +85,13 @@ function OperationSection({
       setProgressStatus(`Parsing shapefile (${(zipBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)...`);
       const geojson = await processShapefile(zipBuffer);
 
-      const interiorRings = (analysis.interiorRingsGeoJSON || []) as Array<{ type: 'Polygon'; coordinates: number[][][] }>;
+      const irrigatedBoundary = (analysis.irrigatedBoundaryGeoJSON || null) as { type: 'MultiPolygon'; coordinates: number[][][][] } | null;
       setProgressStatus(`Analyzing ${geojson.features.length.toLocaleString()} polygons...`);
 
       if (title.toLowerCase().includes('seeding') || title.toLowerCase().includes('planting')) {
-        setResult(classifySeedingPolygons(geojson, interiorRings, analysis.irrigated));
+        setResult(classifySeedingPolygons(geojson, irrigatedBoundary, analysis.irrigated));
       } else {
-        setResult(classifyHarvestPolygons(geojson, interiorRings, analysis.irrigated));
+        setResult(classifyHarvestPolygons(geojson, irrigatedBoundary, analysis.irrigated));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
