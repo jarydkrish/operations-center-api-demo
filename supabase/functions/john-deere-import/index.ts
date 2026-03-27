@@ -158,19 +158,36 @@ interface JdOperation {
   links?: JdLink[];
 }
 
+// Map operation type to the primary measurement type name
+const MEASUREMENT_TYPE_MAP: Record<string, string> = {
+  harvest: "HarvestYieldResult",
+  seeding: "SeedingRateResult",
+  application: "ApplicationRateResult",
+  tillage: "TillageDepthResult",
+};
+
+interface MeasurementResult {
+  area_value?: number;
+  area_unit?: string;
+  avg_yield_value?: number;
+  avg_yield_unit?: string;
+  avg_moisture?: number;
+  total_wet_mass_value?: number;
+  total_wet_mass_unit?: string;
+  measurement_type?: string;
+}
+
 async function fetchMeasurementData(
   accessToken: string,
   operationId: string,
-): Promise<{
-  area_value?: number; area_unit?: string;
-  avg_yield_value?: number; avg_yield_unit?: string;
-  avg_moisture?: number;
-  total_wet_mass_value?: number; total_wet_mass_unit?: string;
-}> {
+  operationType: string,
+): Promise<MeasurementResult> {
+  const measurementType = MEASUREMENT_TYPE_MAP[operationType];
+  if (!measurementType) return {};
+
   try {
-    // Request English units (bu/ac) and volumetric yield
     const response = await fetch(
-      `${JOHN_DEERE_API_BASE}/fieldOperations/${operationId}/measurementTypes/HarvestYieldResult`,
+      `${JOHN_DEERE_API_BASE}/fieldOperations/${operationId}/measurementTypes/${measurementType}`,
       {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -191,8 +208,79 @@ async function fetchMeasurementData(
       avg_moisture: data.averageMoisture?.value,
       total_wet_mass_value: data.wetMass?.value,
       total_wet_mass_unit: data.wetMass?.unitId,
+      measurement_type: measurementType,
     };
   } catch (_) {
+    return {};
+  }
+}
+
+interface MapImageResult {
+  map_image_path?: string;
+  map_image_extent?: unknown;
+  map_image_legends?: unknown;
+}
+
+async function fetchAndStoreMapImage(
+  supabase: SupabaseClient,
+  accessToken: string,
+  userId: string,
+  operationId: string,
+  operationType: string,
+): Promise<MapImageResult> {
+  const measurementType = MEASUREMENT_TYPE_MAP[operationType];
+  if (!measurementType) return {};
+
+  try {
+    const response = await fetch(
+      `${JOHN_DEERE_API_BASE}/fieldOperations/${operationId}/measurementTypes/${measurementType}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/vnd.deere.axiom.v3.image+json",
+          "Accept-UOM-System": "ENGLISH",
+        },
+      },
+    );
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    const imageValue = data.value || data;
+    const imageDataUri: string = imageValue.image || "";
+    const extent = imageValue.extent || null;
+    const legend = imageValue.legend || null;
+
+    if (!imageDataUri) return {};
+
+    // Strip data URI prefix and decode base64 to bytes
+    const base64Data = imageDataUri.replace(/^data:image\/png;base64,/, "");
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Upload to Supabase Storage
+    const storagePath = `${userId}/${operationId}.png`;
+    const { error: uploadError } = await supabase.storage
+      .from("operation-images")
+      .upload(storagePath, bytes, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(`[import] Failed to upload map image: ${uploadError.message}`);
+      return {};
+    }
+
+    return {
+      map_image_path: storagePath,
+      map_image_extent: extent,
+      map_image_legends: legend?.ranges || null,
+    };
+  } catch (err) {
+    console.error(`[import] Map image fetch error:`, err);
     return {};
   }
 }
@@ -231,11 +319,13 @@ async function importOperations(
         const operations: JdOperation[] = data.values || [];
 
         for (const op of operations) {
-          // Fetch measurement data for harvest operations
-          let measurements = {};
-          if (op.fieldOperationType === "harvest") {
-            measurements = await fetchMeasurementData(accessToken, op.id);
-          }
+          const opTypeStr = op.fieldOperationType || opType.toLowerCase();
+
+          // Fetch measurement data (area, yield, moisture) for all operation types
+          const measurements = await fetchMeasurementData(accessToken, op.id, opTypeStr);
+
+          // Fetch and store map image
+          const imageData = await fetchAndStoreMapImage(supabase, accessToken, userId, op.id, opTypeStr);
 
           const firstVariety = op.varieties?.[0];
           const firstMachine = op.fieldOperationMachines?.[0];
@@ -257,6 +347,7 @@ async function importOperations(
               machine_name: firstMachine?.name || null,
               machine_vin: firstMachine?.vin || null,
               ...measurements,
+              ...imageData,
               raw_response: op,
               imported_at: now,
               updated_at: now,

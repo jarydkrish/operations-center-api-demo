@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { fetchStoredOperations } from '@/lib/john-deere-client';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Loader2, Wheat, RefreshCw, Calendar, Droplets } from 'lucide-react';
+import { Loader2, Sprout, RefreshCw, Calendar } from 'lucide-react';
 import type { StoredFieldOperation } from '@/types/john-deere';
 
 function OperationImage({ imagePath }: { imagePath: string }) {
@@ -24,7 +24,7 @@ function OperationImage({ imagePath }: { imagePath: string }) {
   return <img src={src} alt="Operation map" className="w-full rounded-lg border border-slate-200 mt-3" />;
 }
 
-export function HarvestOperations() {
+export function PlantingOperations() {
   const { johnDeereConnection } = useAuth();
   const [operations, setOperations] = useState<StoredFieldOperation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,10 +40,10 @@ export function HarvestOperations() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchStoredOperations(undefined, 'harvest');
+      const data = await fetchStoredOperations(undefined, 'seeding');
       setOperations(data.operations || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load harvest operations');
+      setError(err instanceof Error ? err.message : 'Failed to load planting operations');
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +62,6 @@ export function HarvestOperations() {
     }
   };
 
-  // Group by field
   const fieldGroups = operations.reduce((acc, op) => {
     const key = op.jd_field_id;
     if (!acc[key]) acc[key] = [];
@@ -77,8 +76,8 @@ export function HarvestOperations() {
     return (
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="text-center py-8">
-          <Wheat className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">Select an organization to view harvest operations</p>
+          <Sprout className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">Select an organization to view planting operations</p>
         </div>
       </div>
     );
@@ -88,11 +87,11 @@ export function HarvestOperations() {
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-            <Wheat className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <Sprout className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900">Harvest Operations</h3>
+            <h3 className="font-semibold text-slate-900">Planting Operations</h3>
             <p className="text-sm text-slate-500">
               {totalOperations} operations across {fieldEntries.length} fields
             </p>
@@ -105,8 +104,8 @@ export function HarvestOperations() {
 
       {isLoading && operations.length === 0 ? (
         <div className="p-8 text-center">
-          <Loader2 className="w-8 h-8 text-amber-600 animate-spin mx-auto mb-3" />
-          <p className="text-slate-500">Loading harvest operations...</p>
+          <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto mb-3" />
+          <p className="text-slate-500">Loading planting operations...</p>
         </div>
       ) : error ? (
         <div className="p-6">
@@ -116,8 +115,8 @@ export function HarvestOperations() {
         </div>
       ) : totalOperations === 0 ? (
         <div className="p-8 text-center">
-          <Wheat className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">No harvest operations found. Import fields to sync operations.</p>
+          <Sprout className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No planting operations found. Import fields to sync operations.</p>
         </div>
       ) : (
         <div className="divide-y divide-slate-100">
@@ -135,12 +134,12 @@ export function HarvestOperations() {
                     <div className="flex flex-wrap items-center gap-4 text-sm">
                       {op.crop_name && (
                         <div className="flex items-center gap-1.5">
-                          <Wheat className="w-4 h-4 text-amber-600" />
+                          <Sprout className="w-4 h-4 text-green-600" />
                           <span className="text-slate-700">{op.crop_name}</span>
                         </div>
                       )}
                       {op.crop_season && (
-                        <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
                           {op.crop_season}
                         </span>
                       )}
@@ -148,20 +147,14 @@ export function HarvestOperations() {
                         <Calendar className="w-4 h-4 text-blue-600" />
                         <span className="text-slate-700">{formatDate(op.start_date)}</span>
                       </div>
-                      {op.avg_moisture != null && (
-                        <div className="flex items-center gap-1.5">
-                          <Droplets className="w-4 h-4 text-cyan-600" />
-                          <span className="text-slate-700">{op.avg_moisture.toFixed(1)}% moisture</span>
-                        </div>
-                      )}
-                      {op.avg_yield_value != null && (
-                        <span className="text-slate-700 font-medium">
-                          Avg yield: {op.avg_yield_value.toLocaleString(undefined, { maximumFractionDigits: 2 })} {op.avg_yield_unit || ''}
-                        </span>
-                      )}
                       {op.area_value != null && (
                         <span className="text-slate-500">
                           {op.area_value.toLocaleString(undefined, { maximumFractionDigits: 1 })} {op.area_unit || ''}
+                        </span>
+                      )}
+                      {op.avg_yield_value != null && (
+                        <span className="text-slate-700 font-medium">
+                          Rate: {op.avg_yield_value.toLocaleString(undefined, { maximumFractionDigits: 0 })} {op.avg_yield_unit || ''}
                         </span>
                       )}
                     </div>
