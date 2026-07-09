@@ -1,6 +1,6 @@
 # Farm Data Hub
 
-A demo web app that connects to the **John Deere Operations Center API** to display farm data — fields, boundaries, irrigation analysis, and harvest/seeding operations — all behind a Supabase-powered auth layer.
+A demo web app that connects to the **John Deere Operations Center API** to display farm data — fields, boundaries, irrigation analysis, and harvest/seeding operations — all behind a Supabase-powered auth layer. Can be set up with bolt.new, or with Vercel and Supabase!
 
 ![Dashboard screenshot](./map.png)
 
